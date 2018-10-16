@@ -10,6 +10,7 @@ import UIKit
 import AlamofireImage
 
 class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
+    var selectedURL:URL?
     var posts:[[String:Any]] = [] {
         didSet {
             self.tableView.reloadData()
@@ -59,25 +60,64 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         task.resume()
     }
-//    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-//        let post = posts[indexPath.row]
-//        if let photos = post["photos"] as? [[String:Any]] {
-//            let photo = photos[0]
-//            let originalSize = photo["original_size"] as! [String: Any]
-//            let height = originalSize["height"] as! Int
-//            return CGFloat(integerLiteral: height)
-//        }
-//        return CGFloat(integerLiteral: 0)
-//    }
     
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if let identifer = segue.identifier {
+            switch(identifer) {
+            case "ShowPhotoDetail":
+                if let dvc = segue.destination as? PhotoDetailViewController {
+                    dvc.url = selectedURL
+                }
+            default:
+                break
+            }
+        }
+    }
+    
+    
+    // MARK: - TableView delegate and data source methods
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
         return posts.count
+    }
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return 1
+    }
+    
+    func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
+        let headerView = UIView(frame: CGRect(x: 0, y: 0, width: 320, height: 30))
+        headerView.backgroundColor = UIColor(white: 1, alpha: 0.9)
+        
+        let profileView = UIImageView(frame: CGRect(x: 10, y: 10, width: 30, height: 30))
+        profileView.clipsToBounds = true
+        profileView.layer.cornerRadius = 15;
+        profileView.layer.borderColor = UIColor(white: 0.7, alpha: 0.8).cgColor
+        profileView.layer.borderWidth = 1;
+        
+        // Set the avatar
+        profileView.af_setImage(withURL: URL(string: "https://api.tumblr.com/v2/blog/humansofnewyork.tumblr.com/avatar")!)
+        headerView.addSubview(profileView)
+        
+        // Add a UILabel for the date here
+        let label = UILabel(frame: CGRect(x: 40, y: 0, width: 400, height: 50))
+        // Use the section number to get the right URL
+        let post = posts[section]
+        if let date = post["date"] as? String {
+            label.text = date
+        }
+        // let label = ...
+        headerView.addSubview(label)
+        
+        return headerView
+    }
+    func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
+        return 50
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         print("getting cell for row")
         let cell = tableView.dequeueReusableCell(withIdentifier: "PhotoCell") as! PhotoCellTableViewCell
-        let post = posts[indexPath.row]
+        let post = posts[indexPath.section]
         if let photos = post["photos"] as? [[String: Any]] {
             let photo = photos[0]
             let originalSize = photo["original_size"] as! [String: Any]
@@ -87,6 +127,18 @@ class PhotosViewController: UIViewController, UITableViewDelegate, UITableViewDa
         }
         
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let post = posts[indexPath.section]
+        if let photos = post["photos"] as? [[String: Any]] {
+            let photo = photos[0]
+            let originalSize = photo["original_size"] as! [String: Any]
+            let urlString = originalSize["url"] as! String
+            let url = URL(string: urlString)
+            selectedURL = url
+        }
+        performSegue(withIdentifier: "ShowPhotoDetail", sender: self)
     }
     /*
     // MARK: - Navigation
